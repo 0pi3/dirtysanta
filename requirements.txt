@@ -1,0 +1,6 @@
+wheel
+asgiref
+Django
+python-dotenv
+pytz
+sqlparse
