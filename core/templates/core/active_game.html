@@ -6,25 +6,36 @@
 {% endblock title %}
 
 {% block content %}
-<div class='player_container'>
-
+<div class='container'>
+    {% if game.ready == True %}
+    <div id="game_status">
+        <p>Game has started!</p>
+    </div>    
+    {% else %}
     <div id="game_status">
         <p>Waiting for game to start</p>
     </div>
-
-{% if request.user.is_authenticated %}
-{% include 'core/active_game_current_player.html' %}
-{% else %}
-
-    {% if current_player.id != session_id %}
-    {% include 'core/active_game_current_player.html' %}
-    {% else %}
-    <div id="player_details" class="">
-        <p id="current_player">{{current_player.name}} is up!</p>
-    </div>
     {% endif %}
 
-{% endif %}
+    <div id="player_details" class="">
+        <p id="current_player">
+            {% if game.ready == True %}
+                {{current_player.name}} is up!
+            {% endif %}
+        </p>
+        <p id="player_turn" class="fw-bold"></p>
+    </div>
+
+    {% if request.user.is_authenticated %}
+        {% include 'core/active_game_current_player.html' %}        
+    {% else %}
+
+        {% if current_player.id == session_id %}
+            {% include 'core/active_game_current_player.html' %}
+        {% else %}
+        {% endif %}
+
+    {% endif %}
 </div>
 {% endblock content %}
 
@@ -32,14 +43,19 @@
 {#<script src="{% static 'core/main.js' %}" async defer></script>#}
 <script>
 $(document).ready(function(){
-    var interval = 10000
-    var isReady = false
+    if("{{game.ready}}" == "True"){
+        var interval = 1000
+    }
+    else {
+        var interval = 10000
+    }
     setInterval(function (){
         $.ajax({
             url: "{% url 'core:game_details' game.code %}",
             type: "GET",
             dataType: "json",
             success: function(data){
+                console.log(data['setup'])
                 console.log(data['ready'])
                 console.log("current session id: ", data['session_player'])
                 console.log(data['current_turn'])
@@ -48,20 +64,26 @@ $(document).ready(function(){
                 console.log('players with gifts count: ', data['players_with_gifts_len'])
                 console.log('players with gifts list: ', data['players_with_gifts'])
                 console.log('player_id: ', data["current_player_id"])
-                if(data['ready'] != isReady) {
-                    $('#game_status').replaceWith(
-                    `<div id="game_status" class="">
-                        <p>Game has started!</p>
-                    </div>`
-                    ); //insert text of test.php into your div
+                console.log('player_turn: ', data["player_turn"])
+                if(data['reload_page'] == true) {
+                    location.reload()
+                }
+                if(data['setup'] == true && data['ready'] == false) {
+                    $("#current_player").text("Your turn is")
+                    $("#player_turn").text(data['player_turn'])
                 }
                 if(data['ready'] == true) {
-                    $("#current_player").text(data['current_player_name'] + " is up!")
+                    if(data['session_player'] == data["current_player_id"]) {
+                        if($('#active_player').length == 0){
+                            location.reload()
+                        }
+                        else{
+                            $("#current_player").text("You're up!")
+                        }
+                    }
+                    else{$("#current_player").text(data['current_player_name'] + " is up!")}
+                    $("#player_turn").text("")
                 }
-                if(data['session_player'] == data['current_player_id']){
-
-                }
-                
             },
         });
     }, interval);

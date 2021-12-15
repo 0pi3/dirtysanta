@@ -1,8 +1,4 @@
-<div id="player_details" class="">
-    <p id="your_turn">It's your turn!</p>
-</div>
-
-<div>
+<div id="active_player">
     <form class="gift_action_form" method='POST' action="{% url 'core:game_details' game.code %}">
         {% csrf_token %}
         <input type="hidden" name="open" value="{{current_player.id}}">

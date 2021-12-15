@@ -17,12 +17,13 @@
             <button type="submit">Continue Game</button>
         {% else %}
             {% if request.user.is_authenticated %}
-                <input type="hidden" id="new_game" name="new" value="new">
-                <button type="submit">Start New Game</button>
-            {% endif %}
+            <input type="hidden" id="new_game" name="new" value="new">
+            <button type="submit">Start New Game</button>
+            {% else %}
             <input type="text" name="join" placeholder="Game Code">
             <input type="text" name="name" placeholder="Name">
             <button type="submit">Join Game</button>
+            {% endif %}
         {% endif %}
     </form>
 </div>

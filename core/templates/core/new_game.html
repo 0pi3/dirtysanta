@@ -6,6 +6,12 @@
 
 {% block content %}
 <div class="container">
+    {% if new_player %}
+    <div class="alert alert-{{new_player_outcome}} alert-dismissible fade show" role="alert">
+        <strong>{{new_player}}</strong> {{new_player_message}}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endif %}
 
     <h2>Game: {{game.code}}</h2>
     <h4>Total Players: {{player_count}}</h4>
@@ -16,22 +22,49 @@
         {% csrf_token %}
         <input type="hidden" name="code" value="{{game.code}}">
         <input type="hidden" name="action" value="setup">
-        <button type="submit">Setup Game</button>
+        <button type="submit" class="btn btn-info">Setup Game</button>
     </form>
     {% else %}
     <form method="POST">
         {% csrf_token %}
         <input type="hidden" name="code" value="{{game.code}}">
         <input type="hidden" name="action" value="ready">
-        <button type="submit">Ready Game</button>
+        <button type="submit" class="btn btn-success">Ready Game</button>
     </form>
     {% endif %}
     
-    <p>Add players not using a phone</p>
-    {# modal to add player goes here #}
+    <!-- Button trigger modal -->
+    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#exampleModal">
+        Add Player
+    </button>
+    
+    <!-- Modal -->
+    <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form method="POST">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="exampleModalLabel">Add New Player</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="warning">Warning - Do not use this form to add any player who intends to use their phone.</p>
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="add_player">
+                            <label for="new_name">Players Name: </label>
+                            <input id="new_player_name" type="text" name="new_name">
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="submit" class="btn btn-primary">Save changes</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 
     {% for player in players %}
-    <p>{{player.name|title}} - Number: {{player.turn}}</p>
+    <p>{{player.name|title}} - Turn: {{player.turn}}</p>
     {% endfor %}
 
 </div> 

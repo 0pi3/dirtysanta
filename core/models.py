@@ -25,6 +25,7 @@ class GamePlayer(models.Model):
     name = models.CharField("Player Name", max_length=50)
     turn = models.SmallIntegerField("Players Turn Number", blank=True, null=True, default=None)
     possession = models.BooleanField("Player has gift", default=False)
+    phone = models.BooleanField("Player using phone", default=False)
 
     def __str__(self):
         return self.name

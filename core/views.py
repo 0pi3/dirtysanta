@@ -34,18 +34,18 @@ def index(request):
 
     if request.POST:
         if "join" in request.POST:
-            code = request.POST['join']
+            code = request.POST['join'].upper()
             # check if code entered is correct
             game_exists = GameSession.objects.filter(code=code)
             if game_exists.exists():
                 player = request.POST['name']
                 # create session for player
                 request.session['game'] = code
-                request.session['name'] = player
+                request.session['player_name'] = player
                 # add player to DB
                 game = GameSession.objects.get(code=code)
-                new_game_player = GamePlayer.objects.create(session_id=game, name=player)
-                request.session['id'] = new_game_player.id
+                new_game_player = GamePlayer.objects.create(session_id=game, name=player, phone=True)
+                request.session['player_id'] = new_game_player.id
 
                 return redirect("core:active_game", code)
             else:
@@ -75,16 +75,37 @@ def new_game(request):
         game = GameSession.objects.create(manager=request.user)
         player = GamePlayer.objects.create(session_id=game, name=request.user.username)
         request.session['game'] = game.code
-        request.session['name'] = player.name
+        request.session['player_name'] = player.name
+        request.session['player_id'] = player.id
+
+    # set new_game_player & new_game_player_outcome variable in case nothing posted
+    new_game_player = None
+    new_game_player_message = None
+    new_game_player_outcome = None
 
     if request.method == "POST":
-        if request.POST['action'] == "setup":
-            game = game_setup(game)
-        elif request.POST['action'] == "ready":
-            game_session = GameSession.objects.get(code=game)
-            game_session.ready = True
-            game_session.save()
-            game = game_session
+        if 'action' in request.POST:
+            if request.POST['action'] == "setup":
+                game = game_setup(game)
+            elif request.POST['action'] == "ready":
+                game_session = GameSession.objects.get(code=game)
+                game_session.ready = True
+                game_session.save()
+                game = game_session
+                return redirect('core:active_game', game.code)
+            elif request.POST['action'] == "add_player":
+                # add new player - not using phone
+                game = GameSession.objects.get(code=game)
+                if GamePlayer.objects.filter(session_id=game, name=request.POST['new_name']).exists():
+                    new_game_player = request.POST['new_name']
+                    new_game_player_message = "already exists."
+                    new_game_player_outcome = "warning"
+                else:
+                    new_game_player = GamePlayer.objects.create(session_id=game, name=request.POST['new_name'])
+                    new_game_player = new_game_player.name
+                    new_game_player_message = "has been added."
+                    new_game_player_outcome = "success"
+
 
     players = GamePlayer.objects.filter(session_id=game.id)
     player_count = players.count()
@@ -93,6 +114,9 @@ def new_game(request):
         "game": game,
         "players": players,
         "player_count": player_count,
+        "new_player": new_game_player,
+        "new_player_message": new_game_player_message,
+        "new_player_outcome": new_game_player_outcome,
     }
     context.update(default_context())
     return render(request, "core/new_game.html", context)
@@ -121,28 +145,38 @@ def game_setup(game):
 def active_game(request, code):
     game = GameSession.objects.get(code=code)
     if game.complete == True:
-        del request.session['id']
-        return redirect("core:index")
-
-    players = GamePlayer.objects.all()
-    current_player = players.get(turn=game.current_turn)
-    player_gifts = players.filter(possession=True)
-    player_with_gifts = {}
-    for player in player_gifts:
-        player_with_gifts.update({player.id:player.name})
-
-    if game.theif:
-        theif = game.theif.id
-    else:
-        theif = None
+        try:
+            del request.session['game']
+            del request.session['player_name']
+            del request.session['player_id']
+            del request.session['current_player']
+            return redirect("core:index")
+        except:
+            return redirect("core:index")
 
     context = {
         "game": game,
-        "session_id": request.session['id'],
-        "current_player": {'id':current_player.id, 'name':current_player.name},
-        "players_with_gifts": player_with_gifts,
-        "theif": theif,
+        "session_id": request.session['player_id'],
     }
+
+
+    if game.ready == True:
+        players = GamePlayer.objects.filter(session_id=game)
+        current_player = players.get(turn=game.current_turn)
+        player_gifts = players.filter(possession=True)
+        player_with_gifts = {}
+        for player in player_gifts:
+            player_with_gifts.update({player.id:player.name})
+
+        if game.theif:
+            theif = game.theif.id
+        else:
+            theif = None
+        context.update({
+            "current_player": {'id':current_player.id, 'name':current_player.name, 'phone':current_player.phone},
+            "players_with_gifts": player_with_gifts,
+            "theif": theif,
+        })
     context.update(default_context())
     return render(request, "core/active_game.html", context)
 
@@ -157,7 +191,7 @@ def game_details(request, code):
             game_player.save()
 
             # get current player
-            get_current_turn(status, code)
+            get_current_turn(status)
             status.theif = None
             status.save()
             return redirect('core:active_game', code)
@@ -170,42 +204,62 @@ def game_details(request, code):
             stolen_player.possession = False
             stolen_player.save()
 
-            get_current_turn(status, code)
+            get_current_turn(status)
             status.theif = game_player
             status.save()
             return redirect('core:active_game', code)
 
-
-
-    players = GamePlayer.objects.all()
-    current_player = players.get(turn=status.current_turn)
-    player_gifts = players.filter(possession=True)
-    player_with_gifts = {}
-    for player in player_gifts:
-        player_with_gifts.update({player.id:player.name})
-
-    if status.theif:
-        theif = status.theif.id
-    else:
-        theif = None
-
     response = {
         'ready': status.ready,
-        'session_player': request.session['id'],
-        'current_turn': status.current_turn,
-        'theif': theif,
-        'current_player_name': current_player.name,
-        'current_player_id': current_player.id,
-        'players_with_gifts': player_with_gifts,
-        'players_with_gifts_len': len(player_gifts),
+        'setup': status.setup,
     }
+    if status.setup == True:
+        player = GamePlayer.objects.get(id=request.session['player_id'])
+        response.update({
+            'player_turn': player.turn,
+        })
+    if status.ready == True:
+        players = GamePlayer.objects.filter(session_id=status)
+        current_player = players.get(turn=status.current_turn)
+        player_gifts = players.filter(possession=True)
+        player_with_gifts = {}
+        for player in player_gifts:
+            player_with_gifts.update({player.id:player.name})
+
+        if status.theif:
+            theif = status.theif.id
+        else:
+            theif = None
+
+        if 'current_player' not in request.session or request.session['current_player'] != current_player.name:
+            request.session['current_player'] = current_player.name
+            reload_page = True
+        else:
+            reload_page = False
+
+        if status.complete == True:
+            reload_page = True
+
+        response.update({
+            'session_player': request.session['player_id'],
+            'current_turn': status.current_turn,
+            'theif': theif,
+            'current_player_name': current_player.name,
+            'current_player_id': current_player.id,
+            'players_with_gifts': player_with_gifts,
+            'players_with_gifts_len': len(player_gifts),
+            'reload_page': reload_page,
+        })
     return JsonResponse(response)
 
-def get_current_turn(status, code):
-    current_player = GamePlayer.objects.filter(possession=False).order_by('turn').first()
-    if (current_player == None):
+def get_current_turn(status):
+    next_player = GamePlayer.objects.filter(session_id=status, possession=False).order_by('turn').first()
+    if (next_player == None):
         status.complete = True
         status.save()
         return 'redirect'
-
-    status.current_turn = current_player.turn
+    print(next_player)
+    print('current turn')
+    print(next_player.turn)
+    status.current_turn = next_player.turn
+    status.save()
