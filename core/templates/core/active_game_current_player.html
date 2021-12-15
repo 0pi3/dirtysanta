@@ -1,0 +1,25 @@
+<div id="player_details" class="">
+    <p id="your_turn">It's your turn!</p>
+</div>
+
+<div>
+    <form class="gift_action_form" method='POST' action="{% url 'core:game_details' game.code %}">
+        {% csrf_token %}
+        <input type="hidden" name="open" value="{{current_player.id}}">
+        <button id="gift_open_submit" type="submit">Open A Gift</button>
+    </form>
+        
+    {# available gifts #}
+    <span id="player_gifts">
+        {% for player in players_with_gifts.items %}
+        {% if player.0 != theif %}
+        <form class="gift_action_form" method="POST" action="{% url 'core:game_details' game.code %}">
+            {% csrf_token %}
+            <input type="hidden" name="steal" value="{{current_player.id}}">
+            <input type="hidden" name="steal_from" value="{{player.0}}">
+            <input id="gift_open_submit" type="submit" value="Steal from {{player.1}}">
+        </form>
+        {% endif %}
+        {% endfor %}
+    </span>
+</div>

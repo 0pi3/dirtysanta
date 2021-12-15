@@ -1,0 +1,90 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block title %}
+<title>{{title}} - Game {{game.code}}</title>        
+{% endblock title %}
+
+{% block content %}
+<div class='player_container'>
+
+    <div id="game_status">
+        <p>Waiting for game to start</p>
+    </div>
+
+{% if request.user.is_authenticated %}
+{% include 'core/active_game_current_player.html' %}
+{% else %}
+
+    {% if current_player.id != session_id %}
+    {% include 'core/active_game_current_player.html' %}
+    {% else %}
+    <div id="player_details" class="">
+        <p id="current_player">{{current_player.name}} is up!</p>
+    </div>
+    {% endif %}
+
+{% endif %}
+</div>
+{% endblock content %}
+
+{% block javascript %}
+{#<script src="{% static 'core/main.js' %}" async defer></script>#}
+<script>
+$(document).ready(function(){
+    var interval = 10000
+    var isReady = false
+    setInterval(function (){
+        $.ajax({
+            url: "{% url 'core:game_details' game.code %}",
+            type: "GET",
+            dataType: "json",
+            success: function(data){
+                console.log(data['ready'])
+                console.log("current session id: ", data['session_player'])
+                console.log(data['current_turn'])
+                console.log(data['theif'])
+                console.log('current player name: ', data['current_player_name'])
+                console.log('players with gifts count: ', data['players_with_gifts_len'])
+                console.log('players with gifts list: ', data['players_with_gifts'])
+                console.log('player_id: ', data["current_player_id"])
+                if(data['ready'] != isReady) {
+                    $('#game_status').replaceWith(
+                    `<div id="game_status" class="">
+                        <p>Game has started!</p>
+                    </div>`
+                    ); //insert text of test.php into your div
+                }
+                if(data['ready'] == true) {
+                    $("#current_player").text(data['current_player_name'] + " is up!")
+                }
+                if(data['session_player'] == data['current_player_id']){
+
+                }
+                
+            },
+        });
+    }, interval);
+});
+</script>
+<script>
+    /*
+    $(".gift_action_form").submit(function (e) {
+        // preventing from page reload and default actions
+        e.preventDefault();
+        // serialize the data for sending the form data.
+        var serializedData = $(this).serialize();
+
+        $.ajax({
+            url: "{% url 'core:game_details' game.code %}",
+            type: "POST",
+            data: serializedData,
+            success: function(data){
+                console.log("Success! Next Players Turn")
+            },
+        })
+    });
+    */
+</script>
+
+{% endblock javascript %}

@@ -1,6 +1,6 @@
 from django.contrib.auth.models import AbstractUser
 
-class User(AbstractUser):
+class CustomUser(AbstractUser):
     pass
 
     class Meta:

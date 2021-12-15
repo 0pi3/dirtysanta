@@ -1,0 +1,38 @@
+{% extends 'core/base.html' %}
+
+{% block title %}
+<title>{{title}} - Game Setup</title>        
+{% endblock title %}
+
+{% block content %}
+<div class="container">
+
+    <h2>Game: {{game.code}}</h2>
+    <h4>Total Players: {{player_count}}</h4>
+    {# get game ready #}
+    
+    {% if game.setup == False %}
+    <form method="POST">
+        {% csrf_token %}
+        <input type="hidden" name="code" value="{{game.code}}">
+        <input type="hidden" name="action" value="setup">
+        <button type="submit">Setup Game</button>
+    </form>
+    {% else %}
+    <form method="POST">
+        {% csrf_token %}
+        <input type="hidden" name="code" value="{{game.code}}">
+        <input type="hidden" name="action" value="ready">
+        <button type="submit">Ready Game</button>
+    </form>
+    {% endif %}
+    
+    <p>Add players not using a phone</p>
+    {# modal to add player goes here #}
+
+    {% for player in players %}
+    <p>{{player.name|title}} - Number: {{player.turn}}</p>
+    {% endfor %}
+
+</div> 
+{% endblock content %}
