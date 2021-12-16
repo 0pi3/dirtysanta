@@ -5,26 +5,48 @@
 {% endblock title %}
 
 {% block content %}
-<div class="container">
-    <p>Dirty Santa Game</p>
-    {% if error %}
-    <p>{{error}}</p>
-    {% endif %}
-    <form method="POST">
-        {% csrf_token %}
+<div class="container d-flex align-items-center justify-content-center vh-100 ">
+    <div class="row w-100">
+        <h1 class="text-center">Dirty Santa Game</h1>
+        {% if error %}
+            <p class="text-center">{{error}}</p>
+            <p class="text-center">Code Entered: {{code}}</p>
+        {% endif %}
         {% if current_game %}
-            <input type="hidden" id="cont_game" name="continue" value="{{current_game}}">
-            <button type="submit">Continue Game</button>
+            <form method="POST" class="text-center">
+                {% csrf_token %}
+                <input type="hidden" id="cont_game" name="continue" value="{{current_game}}">
+                <button type="submit">Continue Game</button>
+            </form>
+            {% if request.user.is_authenticated %}
+                <h4 class="text-center">You are logged in as {{request.user|title}}</h4>
+                <h5 class="text-center"><a class="link-light" href="{% url 'admin:index' %}">Click here for Admin</a></h5>
+                {% if cur_game_setup == False or cur_game_ready == False %}
+                <form method="POST" class="text-center">
+                    {% csrf_token %}
+                    <input type="hidden" id="setup_game" name="setup" value="{{current_game}}">
+                    <button type="submit">Continue Game Setup</button>
+                </form>
+                {% endif %}
+            {% endif %}
         {% else %}
             {% if request.user.is_authenticated %}
-            <input type="hidden" id="new_game" name="new" value="new">
-            <button type="submit">Start New Game</button>
+            <h4 class="text-center">You are logged in as {{request.user|title}}</h4>
+            <h5 class="text-center"><a class="link-light" href="{% url 'admin:index' %}">Click here for Admin</a></h5>
+            <form method="POST" class="text-center">
+                {% csrf_token %}
+                <input type="hidden" id="new_game" name="new" value="new">
+                <button type="submit">Start New Game</button>
+            </form>
             {% else %}
-            <input type="text" name="join" placeholder="Game Code">
-            <input type="text" name="name" placeholder="Name">
-            <button type="submit">Join Game</button>
+            <form method="POST" class="text-center">
+                {% csrf_token %}
+                <input class="mb-1" type="text" name="join" placeholder="Game Code"><br>
+                <input class="mb-1" type="text" name="name" placeholder="Your Name"><br>
+                <button class="" type="submit">Join Game</button>
+            </form>
             {% endif %}
         {% endif %}
-    </form>
+    </div>
 </div>
 {% endblock content %}

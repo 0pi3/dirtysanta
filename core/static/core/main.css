@@ -1,0 +1,13 @@
+
+body {
+    background-color: #a81817;
+    color: white;
+}
+
+.modal-content {
+    background-color: #344d2f;
+}
+
+.title-string {
+    text-transform: capitalize;
+}

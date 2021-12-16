@@ -3,6 +3,7 @@ from django.shortcuts import render, redirect
 
 from core.models import GamePlayer, GameSession
 import random
+import uuid
 
 # Create your views here.
 
@@ -12,6 +13,7 @@ def default_context():
     }
     return context
 
+
 def index(request):
     def load_index(request, add_context=None):
         if request.user.is_authenticated:
@@ -19,13 +21,27 @@ def index(request):
             if game.exists():
                 game = GameSession.objects.get(manager=request.user, complete=False)
                 cur_game = game.code
+                cur_game_setup = game.setup
+                cur_game_ready = game.ready
             else:
                 cur_game = None
+                cur_game_setup = None
+                cur_game_ready = None
         else:
-            cur_game = None
+            if "game" in request.session:
+                cur_game = request.session['game']
+                cur_game_setup = None
+                cur_game_ready = None
+            else:
+                cur_game = None
+                cur_game_setup = None
+                cur_game_ready = None
+
 
         context = {
             "current_game": cur_game,
+            "cur_game_setup": cur_game_setup,
+            "cur_game_ready": cur_game_ready,
         }
         context.update(default_context())
         if add_context != None:
@@ -35,6 +51,8 @@ def index(request):
     if request.POST:
         if "join" in request.POST:
             code = request.POST['join'].upper()
+            if request.POST['name'] == "":
+                return load_index(request, {'error':'You need to enter your name!', 'code': code})
             # check if code entered is correct
             game_exists = GameSession.objects.filter(code=code)
             if game_exists.exists():
@@ -46,23 +64,31 @@ def index(request):
                 game = GameSession.objects.get(code=code)
                 new_game_player = GamePlayer.objects.create(session_id=game, name=player, phone=True)
                 request.session['player_id'] = new_game_player.id
-
                 return redirect("core:active_game", code)
             else:
-                return load_index(request, {'error':'Incorrect Code'})
+                return load_index(request, {'error':'Incorrect Code', 'code': code})
         elif "continue" in request.POST:
             code = request.POST['continue']
+            game = GameSession.objects.get(code=code)
+            player = GamePlayer.objects.get(session_id=game, name=request.user.username)
+            request.session['game'] = game.code
+            request.session['player_name'] = player.name
+            request.session['player_id'] = player.id
             return redirect("core:active_game", code)
         elif "new" in request.POST:
+            return redirect("core:new_game")
+        elif "setup" in request.POST:
             return redirect("core:new_game")
         else:
             return load_index(request, {'error':'Error! Not sure what though...'})
     else:
+        '''
         try:
             if request.session['game']:
                 return redirect('core:active_game', request.session['game'])
         except KeyError:
             pass
+        '''
         return load_index(request)
 
 
@@ -72,7 +98,8 @@ def new_game(request):
         print("game exists!")
         game = GameSession.objects.get(manager=request.user, complete=False)
     else:
-        game = GameSession.objects.create(manager=request.user)
+        code = uuid.uuid4().hex[:6].upper()
+        game = GameSession.objects.create(manager=request.user, code=code)
         player = GamePlayer.objects.create(session_id=game, name=request.user.username)
         request.session['game'] = game.code
         request.session['player_name'] = player.name
@@ -87,6 +114,11 @@ def new_game(request):
         if 'action' in request.POST:
             if request.POST['action'] == "setup":
                 game = game_setup(game)
+            if request.POST['action'] == "cancel":
+                game = GameSession.objects.get(code=game)
+                game.complete = True
+                game.save()
+                return redirect('core:index')
             elif request.POST['action'] == "ready":
                 game_session = GameSession.objects.get(code=game)
                 game_session.ready = True
@@ -107,7 +139,7 @@ def new_game(request):
                     new_game_player_outcome = "success"
 
 
-    players = GamePlayer.objects.filter(session_id=game.id)
+    players = GamePlayer.objects.filter(session_id=game.id).order_by('turn', 'name')
     player_count = players.count()
 
     context = {
@@ -161,7 +193,7 @@ def active_game(request, code):
 
 
     if game.ready == True:
-        players = GamePlayer.objects.filter(session_id=game)
+        players = GamePlayer.objects.filter(session_id=game).order_by('name')
         current_player = players.get(turn=game.current_turn)
         player_gifts = players.filter(possession=True)
         player_with_gifts = {}
@@ -228,8 +260,10 @@ def game_details(request, code):
 
         if status.theif:
             theif = status.theif.id
+            theif_name = status.theif.name
         else:
             theif = None
+            theif_name = None
 
         if 'current_player' not in request.session or request.session['current_player'] != current_player.name:
             request.session['current_player'] = current_player.name
@@ -244,6 +278,7 @@ def game_details(request, code):
             'session_player': request.session['player_id'],
             'current_turn': status.current_turn,
             'theif': theif,
+            'theif_name': theif_name,
             'current_player_name': current_player.name,
             'current_player_id': current_player.id,
             'players_with_gifts': player_with_gifts,

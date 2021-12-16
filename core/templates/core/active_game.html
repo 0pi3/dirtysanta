@@ -6,24 +6,28 @@
 {% endblock title %}
 
 {% block content %}
-<div class='container'>
+<div class='container text-center'>
     {% if game.ready == True %}
-    <div id="game_status">
-        <p>Game has started!</p>
+    <div id="game_status" class="mt-3 mb-2">
+        <h4>Game has started!</h4>
     </div>    
     {% else %}
-    <div id="game_status">
-        <p>Waiting for game to start</p>
+    <div id="game_status" class="mt-3 mb-2">
+        <h4>Waiting for game to start</h4>
     </div>
     {% endif %}
 
-    <div id="player_details" class="">
-        <p id="current_player">
+    <div id="player_details" class="mb-4">
+        <h3 id="current_player" class="title-string">
             {% if game.ready == True %}
-                {{current_player.name}} is up!
+                {% if current_player.id == session_id %}
+                    Your turn!
+                {% else %}
+                    {{current_player.name|title}} is up!
+                {% endif %}
             {% endif %}
-        </p>
-        <p id="player_turn" class="fw-bold"></p>
+        </h3>
+        <h2 id="player_turn" class="fw-bold"></h2>
     </div>
 
     {% if request.user.is_authenticated %}
@@ -60,6 +64,7 @@ $(document).ready(function(){
                 console.log("current session id: ", data['session_player'])
                 console.log(data['current_turn'])
                 console.log(data['theif'])
+                console.log("theif: ", data['theif_name'])
                 console.log('current player name: ', data['current_player_name'])
                 console.log('players with gifts count: ', data['players_with_gifts_len'])
                 console.log('players with gifts list: ', data['players_with_gifts'])
@@ -75,14 +80,22 @@ $(document).ready(function(){
                 if(data['ready'] == true) {
                     if(data['session_player'] == data["current_player_id"]) {
                         if($('#active_player').length == 0){
+                            if (data['theif']) {
+                                window.navigator.vibrate(500);
+                            }
                             location.reload()
                         }
                         else{
-                            $("#current_player").text("You're up!")
+                            if (data['theif']) {
+                                $("#player_turn").text("Your gift was stolen by " + data['theif_name'])
+                            }
+                            $("#current_player").text("Your turn!")
                         }
                     }
-                    else{$("#current_player").text(data['current_player_name'] + " is up!")}
-                    $("#player_turn").text("")
+                    else{
+                        $("#current_player").text(data['current_player_name'] + " is up!");
+                        $("#player_turn").text("");
+                    }
                 }
             },
         });

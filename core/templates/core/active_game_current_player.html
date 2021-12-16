@@ -1,19 +1,19 @@
-<div id="active_player">
-    <form class="gift_action_form" method='POST' action="{% url 'core:game_details' game.code %}">
+<div id="active_player" class="mb-2">
+    <form class="gift_action_form mb-1" method='POST' action="{% url 'core:game_details' game.code %}">
         {% csrf_token %}
         <input type="hidden" name="open" value="{{current_player.id}}">
-        <button id="gift_open_submit" type="submit">Open A Gift</button>
+        <button id="gift_open_submit" type="submit" class="btn btn-light mb-1">Open A Gift</button>
     </form>
         
     {# available gifts #}
-    <span id="player_gifts">
+    <span id="player_gifts" class="mb-1">
         {% for player in players_with_gifts.items %}
         {% if player.0 != theif %}
-        <form class="gift_action_form" method="POST" action="{% url 'core:game_details' game.code %}">
+        <form class="gift_action_form mb-1" method="POST" action="{% url 'core:game_details' game.code %}">
             {% csrf_token %}
             <input type="hidden" name="steal" value="{{current_player.id}}">
             <input type="hidden" name="steal_from" value="{{player.0}}">
-            <input id="gift_open_submit" type="submit" value="Steal from {{player.1}}">
+            <input id="gift_open_submit" class="btn btn-danger" type="submit" value="Steal from {{player.1|title}}">
         </form>
         {% endif %}
         {% endfor %}
